@@ -128,7 +128,8 @@ export namespace Plugin {
             get serverUrl(): URL {
               return Server.url ?? new URL("http://localhost:4096")
             },
-            $: Bun.$,
+            // @ts-expect-error Bun is undefined in node runtime
+            $: typeof Bun === "undefined" ? undefined : Bun.$,
           }
 
           for (const plugin of INTERNAL_PLUGINS) {
