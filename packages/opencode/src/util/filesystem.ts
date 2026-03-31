@@ -166,6 +166,21 @@ export namespace Filesystem {
     return !relative(parent, child).startsWith("..")
   }
 
+  /**
+   * Normalize a directory path for consistent comparison across platforms.
+   * On Windows, this ensures:
+   * - Forward slashes instead of backslashes
+   * - Lowercase drive letter
+   *
+   * This is critical for session directory matching on Windows, where
+   * sessions stored with `C:/path` won't match queries using `C:\path`
+   * or `c:/path`.
+   */
+  export function normalizeDirectory(p: string): string {
+    if (process.platform !== "win32") return p
+    return p.replace(/\\/g, "/").replace(/^([A-Za-z]):/, (_, d) => d.toLowerCase() + ":")
+  }
+
   export async function findUp(target: string, start: string, stop?: string) {
     let current = start
     const result = []

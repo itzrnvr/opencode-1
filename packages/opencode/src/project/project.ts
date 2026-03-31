@@ -13,6 +13,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { makeRuntime } from "@/effect/run-service"
 import { AppFileSystem } from "@/filesystem"
+import { Filesystem } from "@/util/filesystem"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 
 export namespace Project {
@@ -315,7 +316,7 @@ export namespace Project {
             d
               .update(SessionTable)
               .set({ project_id: data.id })
-              .where(and(eq(SessionTable.project_id, ProjectID.global), eq(SessionTable.directory, data.worktree)))
+              .where(and(eq(SessionTable.project_id, ProjectID.global), eq(SessionTable.directory, Filesystem.normalizeDirectory(data.worktree))))
               .run(),
           )
         }
