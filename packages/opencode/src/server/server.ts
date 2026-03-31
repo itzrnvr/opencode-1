@@ -34,7 +34,12 @@ export namespace Server {
     return false
   }
 
-  export const Default = lazy(() => ControlPlaneRoutes())
+  export const Default = lazy(() => {
+    const app = ControlPlaneRoutes()
+    const fn = (input: RequestInfo | URL, init?: RequestInit) => app.fetch(new Request(input, init))
+    const request = (input: string, init?: RequestInit) => app.request(input, init)
+    return { app, fetch: fn, request }
+  })
 
   export const ControlPlaneRoutes = (opts?: { cors?: string[] }): Hono => {
     const app = new Hono()
