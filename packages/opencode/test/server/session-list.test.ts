@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Instance } from "../../src/project/instance"
 import { Session } from "../../src/session"
 import { Log } from "../../src/util/log"
+import { Database, eq } from "../../src/storage/db"
+import { SessionTable } from "../../src/session/session.sql"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
@@ -33,6 +35,28 @@ describe("Session.list", () => {
     })
   })
 
+  test("matches Windows directory filters across slash styles", async () => {
+    if (process.platform !== "win32") return
+
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const created = await Session.create({ title: "windows-path-style" })
+        const slash = tmp.path.replace(/\\/g, "/").toLowerCase()
+
+        Database.use((db) =>
+          db.update(SessionTable).set({ directory: slash }).where(eq(SessionTable.id, created.id)).run(),
+        )
+
+        const byBackslash = [...Session.list({ directory: tmp.path })]
+        const bySlash = [...Session.list({ directory: slash })]
+
+        expect(byBackslash.map((s) => s.id)).toContain(created.id)
+        expect(bySlash.map((s) => s.id)).toContain(created.id)
+      },
+    })
+  })
   test("filters root sessions", async () => {
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({

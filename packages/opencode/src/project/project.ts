@@ -1,5 +1,5 @@
 import z from "zod"
-import { and, Database, eq } from "../storage/db"
+import { and, Database, eq, sql } from "../storage/db"
 import { ProjectTable } from "./project.sql"
 import { SessionTable } from "../session/session.sql"
 import { Log } from "../util/log"
@@ -316,7 +316,14 @@ export namespace Project {
             d
               .update(SessionTable)
               .set({ project_id: data.id })
-              .where(and(eq(SessionTable.project_id, ProjectID.global), eq(SessionTable.directory, Filesystem.normalizeDirectory(data.worktree))))
+              .where(
+                and(
+                  eq(SessionTable.project_id, ProjectID.global),
+                  process.platform === "win32"
+                    ? sql`lower(replace(${SessionTable.directory}, ${"\\"}, ${"/"})) = ${Filesystem.normalizeDirectory(data.worktree).replace(/\\/g, "/").toLowerCase()}`
+                    : eq(SessionTable.directory, Filesystem.normalizeDirectory(data.worktree)),
+                ),
+              )
               .run(),
           )
         }

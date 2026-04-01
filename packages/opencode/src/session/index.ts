@@ -9,7 +9,7 @@ import { Config } from "../config/config"
 import { Flag } from "../flag/flag"
 import { Installation } from "../installation"
 
-import { Database, NotFoundError, eq, and, gte, isNull, desc, like, inArray, lt } from "../storage/db"
+import { Database, NotFoundError, eq, and, gte, isNull, desc, like, inArray, lt, sql } from "../storage/db"
 import { SyncEvent } from "../sync"
 import type { SQL } from "../storage/db"
 import { SessionTable } from "./session.sql"
@@ -183,6 +183,19 @@ export namespace Session {
     ref: "GlobalSession",
   })
   export type GlobalInfo = z.output<typeof GlobalInfo>
+  function normalizeDirectoryForFilter(input: string) {
+    const normalized = Filesystem.normalizeDirectory(input)
+    if (process.platform !== "win32") return normalized
+    return normalized.replace(/\\/g, "/").toLowerCase()
+  }
+
+  function directoryFilterCondition(directory: string): SQL {
+    const normalized = normalizeDirectoryForFilter(directory)
+    if (process.platform !== "win32") {
+      return eq(SessionTable.directory, normalized)
+    }
+    return sql`lower(replace(${SessionTable.directory}, ${"\\"}, ${"/"})) = ${normalized}`
+  }
 
   export const Event = {
     Created: SyncEvent.define({
@@ -750,7 +763,7 @@ export namespace Session {
       conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
     }
     if (input?.directory) {
-      conditions.push(eq(SessionTable.directory, Filesystem.normalizeDirectory(input.directory)))
+      conditions.push(directoryFilterCondition(input.directory))
     }
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))
@@ -790,7 +803,7 @@ export namespace Session {
     const conditions: SQL[] = []
 
     if (input?.directory) {
-      conditions.push(eq(SessionTable.directory, Filesystem.normalizeDirectory(input.directory)))
+      conditions.push(directoryFilterCondition(input.directory))
     }
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))
